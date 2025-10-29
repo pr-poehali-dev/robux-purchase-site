@@ -13,10 +13,10 @@ const Index = () => {
   const { toast } = useToast();
 
   const packages = [
-    { id: 1, amount: 400, price: 99, popular: false },
-    { id: 2, amount: 800, price: 189, popular: true },
-    { id: 3, amount: 1700, price: 369, popular: false },
-    { id: 4, amount: 4500, price: 899, popular: false },
+    { id: 1, amount: 400, price: 305, popular: false },
+    { id: 2, amount: 800, price: 610, popular: true },
+    { id: 3, amount: 1700, price: 1295, popular: false },
+    { id: 4, amount: 4500, price: 3430, popular: false },
   ];
 
   const reviews = [
