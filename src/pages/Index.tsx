@@ -2,15 +2,26 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
+  const [customAmount, setCustomAmount] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedAmount, setSelectedAmount] = useState(0);
+  const [selectedPrice, setSelectedPrice] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [username, setUsername] = useState('');
   const { toast } = useToast();
+
+  const ROBUX_RATE = 0.7625;
 
   const packages = [
     { id: 1, amount: 400, price: 305, popular: false },
@@ -62,6 +73,55 @@ const Index = () => {
     return price;
   };
 
+  const calculateCustomRobux = (amount: string) => {
+    const num = parseInt(amount);
+    if (isNaN(num) || num < 100) return 0;
+    return Math.round(num * ROBUX_RATE);
+  };
+
+  const handleCustomBuy = () => {
+    const amount = parseInt(customAmount);
+    if (isNaN(amount) || amount < 100) {
+      toast({
+        title: '❌ Ошибка',
+        description: 'Минимальная сумма пополнения — 100₽',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const robux = calculateCustomRobux(customAmount);
+    const finalPrice = calculatePrice(amount);
+    setSelectedAmount(robux);
+    setSelectedPrice(finalPrice);
+    setIsDialogOpen(true);
+  };
+
+  const handlePackageBuy = (amount: number, price: number) => {
+    setSelectedAmount(amount);
+    setSelectedPrice(calculatePrice(price));
+    setIsDialogOpen(true);
+  };
+
+  const handlePayment = () => {
+    if (!username.trim()) {
+      toast({
+        title: '❌ Ошибка',
+        description: 'Введите ваш никнейм в Roblox',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({
+      title: '🚀 Переход к оплате',
+      description: `${selectedAmount} робуксов • ${selectedPrice}₽`,
+    });
+
+    setIsDialogOpen(false);
+    setUsername('');
+    setCustomAmount('');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-50">
@@ -75,6 +135,7 @@ const Index = () => {
             </div>
             <nav className="hidden md:flex gap-6">
               <a href="#catalog" className="hover:text-primary transition-colors">Каталог</a>
+              <a href="#calculator" className="hover:text-primary transition-colors">Калькулятор</a>
               <a href="#reviews" className="hover:text-primary transition-colors">Отзывы</a>
               <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
               <a href="#contact" className="hover:text-primary transition-colors">Контакты</a>
@@ -98,9 +159,70 @@ const Index = () => {
         </div>
       </section>
 
-      <section id="catalog" className="py-16 bg-muted/30">
+      <section id="calculator" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-12">Выберите пакет</h2>
+          <h2 className="text-4xl font-bold text-center mb-12">Калькулятор робуксов</h2>
+          <div className="max-w-2xl mx-auto">
+            <Card className="animate-scale-in">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icon name="Calculator" size={24} />
+                  Рассчитайте своё количество
+                </CardTitle>
+                <CardDescription>Купите ровно столько, сколько вам нужно (минимум 100₽)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="rubles">Сумма в рублях</Label>
+                    <Input
+                      id="rubles"
+                      type="number"
+                      placeholder="100"
+                      min="100"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      className="text-lg"
+                    />
+                  </div>
+                  <div>
+                    <Label>Вы получите робуксов</Label>
+                    <div className="h-10 flex items-center justify-center bg-primary/10 rounded-lg text-2xl font-bold text-primary">
+                      {calculateCustomRobux(customAmount) || '—'}
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Курс:</span>
+                    <span className="font-semibold">1₽ = {ROBUX_RATE.toFixed(2)} робуксов</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Ваша выгода:</span>
+                    <span className="font-semibold text-primary">Комиссия 7%</span>
+                  </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Скидка по промокоду:</span>
+                      <span className="font-semibold text-secondary">{discount}%</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button size="lg" className="w-full" onClick={handleCustomBuy}>
+                  <Icon name="ShoppingCart" size={20} className="mr-2" />
+                  Купить за {customAmount ? calculatePrice(parseInt(customAmount)) : '—'}₽
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <section id="catalog" className="py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-12">Популярные пакеты</h2>
           
           <div className="max-w-md mx-auto mb-8">
             <Card className="animate-scale-in">
@@ -161,7 +283,7 @@ const Index = () => {
                   )}
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full" size="lg">
+                  <Button className="w-full" size="lg" onClick={() => handlePackageBuy(pkg.amount, pkg.price)}>
                     <Icon name="ShoppingCart" size={18} className="mr-2" />
                     Купить
                   </Button>
@@ -172,7 +294,7 @@ const Index = () => {
         </div>
       </section>
 
-      <section id="reviews" className="py-16">
+      <section id="reviews" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-12">Отзывы покупателей</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -197,7 +319,7 @@ const Index = () => {
         </div>
       </section>
 
-      <section id="faq" className="py-16 bg-muted/30">
+      <section id="faq" className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-12">Часто задаваемые вопросы</h2>
           <div className="max-w-3xl mx-auto">
@@ -213,7 +335,7 @@ const Index = () => {
         </div>
       </section>
 
-      <section id="contact" className="py-16">
+      <section id="contact" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-12">Контакты</h2>
           <div className="max-w-2xl mx-auto">
@@ -247,6 +369,75 @@ const Index = () => {
           <p className="text-sm mt-2">Мы не связаны с Roblox Corporation</p>
         </div>
       </footer>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Icon name="ShoppingCart" size={24} />
+              Оформление заказа
+            </DialogTitle>
+            <DialogDescription>
+              Выберите способ оплаты и заполните данные
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-primary/10 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-muted-foreground">Вы покупаете:</span>
+                <span className="text-xl font-bold text-primary">{selectedAmount} робуксов</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">К оплате:</span>
+                <span className="text-2xl font-bold">{selectedPrice}₽</span>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="username">Никнейм в Roblox</Label>
+              <Input
+                id="username"
+                placeholder="Ваш никнейм"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label>Способ оплаты</Label>
+              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2">
+                <div className="flex items-center space-x-2 p-3 border border-border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <RadioGroupItem value="card" id="card" />
+                  <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer flex-1">
+                    <Icon name="CreditCard" size={20} className="text-primary" />
+                    Банковская карта
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 border border-border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <RadioGroupItem value="sbp" id="sbp" />
+                  <Label htmlFor="sbp" className="flex items-center gap-2 cursor-pointer flex-1">
+                    <Icon name="Smartphone" size={20} className="text-primary" />
+                    СБП (Система Быстрых Платежей)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 border border-border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <RadioGroupItem value="yoomoney" id="yoomoney" />
+                  <Label htmlFor="yoomoney" className="flex items-center gap-2 cursor-pointer flex-1">
+                    <Icon name="Wallet" size={20} className="text-primary" />
+                    ЮMoney
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handlePayment} className="w-full" size="lg">
+              <Icon name="Lock" size={18} className="mr-2" />
+              Перейти к оплате
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
